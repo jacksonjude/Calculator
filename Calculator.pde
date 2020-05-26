@@ -2,6 +2,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.Arrays;
 
+import java.util.Timer;
+import java.util.TimerTask;
+
 public static final int boxMargin = 15;
 public static final int boxHeight = 150;
 public static final int numRows = 4;
@@ -29,11 +32,18 @@ public static final String EQUALS_CODE = "=";
 public ArrayList<Button> numpadButtons;
 public ArrayList<Button> operationButtons;
 
+public String[] operationButtonCodes = new String[]{DIVISION_CODE, EXPONENT_CODE, MUTLIPLICATION_CODE, OPEN_PAREN_CODE, SUBTRACTION_CODE, CLOSE_PAREN_CODE, ADDITION_CODE, EQUALS_CODE};
+
 public String calculatorEntry = "";
+public String calculatedResult = "";
+
+public ArrayList<Integer> keyCodesPressed = new ArrayList<Integer>();
+
+public boolean shouldPrintDevLogs = true;
 
 public void setup()
 {
-  size(450,500);
+  size(425,500);
 }
 
 public boolean shouldRedraw = true;
@@ -117,126 +127,252 @@ public void mouseMoved()
 
 public void keyPressed()
 {
-  switch (keyCode)
+  handleKeyPressed(keyCode);
+}
+
+public void handleKeyPressed(int keyCodePressed)
+{
+  if (keyCodePressed == 16)
+    keyCodesPressed.add(16);
+
+  if (keyCodesPressed.contains(16))
   {
-    case 48+0:
-    getButtonForValue("0").setPressed(true);
-    break;
+    switch (keyCodePressed)
+    {
+      case 48+0:
+      getButtonForValue(CLOSE_PAREN_CODE).setPressed(true);
+      keyCodesPressed.add(948+0);
+      break;
 
-    case 48+1:
-    getButtonForValue("1").setPressed(true);
-    break;
+      case 48+6:
+      getButtonForValue(EXPONENT_CODE).setPressed(true);
+      keyCodesPressed.add(948+6);
+      break;
 
-    case 48+2:
-    getButtonForValue("2").setPressed(true);
-    break;
+      case 48+8:
+      getButtonForValue(MUTLIPLICATION_CODE).setPressed(true);
+      keyCodesPressed.add(948+8);
+      break;
 
-    case 48+3:
-    getButtonForValue("3").setPressed(true);
-    break;
+      case 48+9:
+      getButtonForValue(OPEN_PAREN_CODE).setPressed(true);
+      keyCodesPressed.add(948+9);
+      break;
 
-    case 48+4:
-    getButtonForValue("4").setPressed(true);
-    break;
+      case 61:
+      getButtonForValue(ADDITION_CODE).setPressed(true);
+      keyCodesPressed.add(961);
+      break;
+    }
+  }
+  else
+  {
+    keyCodesPressed.add(keyCodePressed);
+    switch (keyCodePressed)
+    {
+      case ENTER:
+      case RETURN:
+      case 61:
+      getButtonForValue(EQUALS_CODE).setPressed(true);
+      break;
 
-    case 48+5:
-    getButtonForValue("5").setPressed(true);
-    break;
+      case 48+0:
+      getButtonForValue("0").setPressed(true);
+      break;
 
-    case 48+6:
-    getButtonForValue("6").setPressed(true);
-    break;
+      case 48+1:
+      getButtonForValue("1").setPressed(true);
+      break;
 
-    case 48+7:
-    getButtonForValue("7").setPressed(true);
-    break;
+      case 48+2:
+      getButtonForValue("2").setPressed(true);
+      break;
 
-    case 48+8:
-    getButtonForValue("8").setPressed(true);
-    break;
+      case 48+3:
+      getButtonForValue("3").setPressed(true);
+      break;
 
-    case 48+9:
-    getButtonForValue("9").setPressed(true);
-    break;
+      case 48+4:
+      getButtonForValue("4").setPressed(true);
+      break;
 
-    case 46:
-    getButtonForValue(DECIMAL_CODE).setPressed(true);
-    break;
+      case 48+5:
+      getButtonForValue("5").setPressed(true);
+      break;
 
-    case 8:
-    getButtonForValue(DELETE_CODE).setPressed(true);
-    break;
+      case 48+6:
+      getButtonForValue("6").setPressed(true);
+      break;
+
+      case 48+7:
+      getButtonForValue("7").setPressed(true);
+      break;
+
+      case 48+8:
+      getButtonForValue("8").setPressed(true);
+      break;
+
+      case 48+9:
+      getButtonForValue("9").setPressed(true);
+      break;
+
+      case 45:
+      getButtonForValue(SUBTRACTION_CODE).setPressed(true);
+      break;
+
+      case 47:
+      getButtonForValue(DIVISION_CODE).setPressed(true);
+      break;
+
+      case 46:
+      getButtonForValue(DECIMAL_CODE).setPressed(true);
+      break;
+
+      case 8:
+      getButtonForValue(DELETE_CODE).setPressed(true);
+      break;
+
+      case 192:
+      shouldPrintDevLogs = false;
+      simulationData = new int[9];
+      simulateRandomKeyPresses(80, 0);
+      shouldPrintDevLogs = true;
+      break;
+    }
   }
 }
 
 public void keyReleased()
 {
-  switch (keyCode)
+  handleKeyReleased(keyCode);
+}
+
+public void handleKeyReleased(int keyCodeReleased)
+{
+  if (keyCodeReleased == 16)
+    keyCodesPressed.remove(keyCodesPressed.indexOf(16));
+
+  if (keyCodesPressed.contains(16) || keyCodesPressed.contains(keyCodeReleased+900))
   {
-    case ENTER:
-    case RETURN:
-    executeBaseCalculation();
-    break;
+    switch (keyCodeReleased)
+    {
+      case 48+0:
+      getButtonForValue(CLOSE_PAREN_CODE).setPressed(false);
+      handleOperationPress(CLOSE_PAREN_CODE);
+      break;
 
-    case 48+0:
-    getButtonForValue("0").setPressed(false);
-    handleNumpadPress("0");
-    break;
+      case 48+6:
+      getButtonForValue(EXPONENT_CODE).setPressed(false);
+      handleOperationPress(EXPONENT_CODE);
+      break;
 
-    case 48+1:
-    getButtonForValue("1").setPressed(false);
-    handleNumpadPress("1");
-    break;
+      case 48+8:
+      getButtonForValue(MUTLIPLICATION_CODE).setPressed(false);
+      handleOperationPress(MUTLIPLICATION_CODE);
+      break;
 
-    case 48+2:
-    getButtonForValue("2").setPressed(false);
-    handleNumpadPress("2");
-    break;
+      case 48+9:
+      getButtonForValue(OPEN_PAREN_CODE).setPressed(false);
+      handleOperationPress(OPEN_PAREN_CODE);
+      break;
 
-    case 48+3:
-    getButtonForValue("3").setPressed(false);
-    handleNumpadPress("3");
-    break;
+      case 61:
+      getButtonForValue(ADDITION_CODE).setPressed(false);
+      handleOperationPress(ADDITION_CODE);
+      break;
 
-    case 48+4:
-    getButtonForValue("4").setPressed(false);
-    handleNumpadPress("4");
-    break;
+      case 8:
+      handleNumpadPress(CLEAR_CODE);
+      break;
+    }
 
-    case 48+5:
-    getButtonForValue("5").setPressed(false);
-    handleNumpadPress("5");
-    break;
+    if (keyCodesPressed.indexOf(900+keyCodeReleased) != -1)
+      keyCodesPressed.remove(keyCodesPressed.indexOf(900+keyCodeReleased));
+  }
+  else
+  {
+    switch (keyCodeReleased)
+    {
+      case ENTER:
+      case RETURN:
+      case 61:
+      getButtonForValue(EQUALS_CODE).setPressed(false);
+      executeBaseCalculation();
+      break;
 
-    case 48+6:
-    getButtonForValue("6").setPressed(false);
-    handleNumpadPress("6");
-    break;
+      case 48+0:
+      getButtonForValue("0").setPressed(false);
+      handleNumpadPress("0");
+      break;
 
-    case 48+7:
-    getButtonForValue("7").setPressed(false);
-    handleNumpadPress("7");
-    break;
+      case 48+1:
+      getButtonForValue("1").setPressed(false);
+      handleNumpadPress("1");
+      break;
 
-    case 48+8:
-    getButtonForValue("8").setPressed(false);
-    handleNumpadPress("8");
-    break;
+      case 48+2:
+      getButtonForValue("2").setPressed(false);
+      handleNumpadPress("2");
+      break;
 
-    case 48+9:
-    getButtonForValue("9").setPressed(false);
-    handleNumpadPress("9");
-    break;
+      case 48+3:
+      getButtonForValue("3").setPressed(false);
+      handleNumpadPress("3");
+      break;
 
-    case 46:
-    getButtonForValue(DECIMAL_CODE).setPressed(false);
-    handleNumpadPress(DECIMAL_CODE);
-    break;
+      case 48+4:
+      getButtonForValue("4").setPressed(false);
+      handleNumpadPress("4");
+      break;
 
-    case 8:
-    getButtonForValue(DELETE_CODE).setPressed(false);
-    handleNumpadPress(DELETE_CODE);
-    break;
+      case 48+5:
+      getButtonForValue("5").setPressed(false);
+      handleNumpadPress("5");
+      break;
+
+      case 48+6:
+      getButtonForValue("6").setPressed(false);
+      handleNumpadPress("6");
+      break;
+
+      case 48+7:
+      getButtonForValue("7").setPressed(false);
+      handleNumpadPress("7");
+      break;
+
+      case 48+8:
+      getButtonForValue("8").setPressed(false);
+      handleNumpadPress("8");
+      break;
+
+      case 48+9:
+      getButtonForValue("9").setPressed(false);
+      handleNumpadPress("9");
+      break;
+
+      case 45:
+      getButtonForValue(SUBTRACTION_CODE).setPressed(false);
+      handleOperationPress(SUBTRACTION_CODE);
+      break;
+
+      case 47:
+      getButtonForValue(DIVISION_CODE).setPressed(false);
+      handleOperationPress(DIVISION_CODE);
+      break;
+
+      case 46:
+      getButtonForValue(DECIMAL_CODE).setPressed(false);
+      handleNumpadPress(DECIMAL_CODE);
+      break;
+
+      case 8:
+      getButtonForValue(DELETE_CODE).setPressed(false);
+      handleNumpadPress(DELETE_CODE);
+      break;
+    }
+
+    if (keyCodesPressed.indexOf(keyCodeReleased) != -1)
+      keyCodesPressed.remove(keyCodesPressed.indexOf(keyCodeReleased));
   }
 }
 
@@ -246,7 +382,7 @@ public Button getButtonForValue(String value)
   allButtons.addAll(numpadButtons);
   allButtons.addAll(operationButtons);
 
-  for (Button button : numpadButtons)
+  for (Button button : allButtons)
     if (value.equals(button.getValue()))
       return button;
 
@@ -267,10 +403,10 @@ public void drawEntryBox()
   fill(boxColor);
   rect(boxMargin, boxMargin, width-boxMargin*2, boxHeight);
 
-  fill(0);
+  fill(20);
   textAlign(LEFT);
   textSize(20);
-  text(calculatorEntry, boxMargin*2, 20+boxMargin*2);
+  text(calculatorEntry + (calculatedResult == "" ? "" : "\n=" + calculatedResult), boxMargin*2, boxMargin*2, width-boxMargin*4, boxHeight-boxMargin);
 }
 
 public void drawNumpad(int buttonSize)
@@ -302,27 +438,58 @@ public void drawNumpad(int buttonSize)
 
 public void handleNumpadPress(String numpadValue)
 {
-  if (numpadValue.matches("-?\\d+") || numpadValue == DECIMAL_CODE)
+  String previousCharacter = null;
+  if (calculatorEntry.length() > 0)
+    previousCharacter = String.valueOf(calculatorEntry.charAt(calculatorEntry.length()-1));
+
+  if (numpadValue.matches("-?\\d+") || numpadValue.equals(DECIMAL_CODE))
   {
+    if (calculatorEntry.length() > 0 && previousCharacter.equals(CLOSE_PAREN_CODE))
+      calculatorEntry += MUTLIPLICATION_CODE;
+
+    boolean didAddZeroBeforeDecimal = false;
+    if (numpadValue.equals(DECIMAL_CODE) && (calculatorEntry.length() == 0 || Arrays.asList(operationButtonCodes).contains(previousCharacter)))
+    {
+      calculatorEntry += "0";
+      didAddZeroBeforeDecimal = true;
+    }
     calculatorEntry += numpadValue;
+
+    if (numpadValue.equals(DECIMAL_CODE))
+    {
+      ArrayList<String> numericalValues = getNumericalValues(calculatorEntry);
+      if (!isNumeric(numericalValues.get(numericalValues.size()-1)))
+        calculatorEntry = calculatorEntry.substring(0, calculatorEntry.length()-(didAddZeroBeforeDecimal ? 2 : 1));
+    }
   }
-  else if (numpadValue == DELETE_CODE && calculatorEntry != null && calculatorEntry.length() > 0)
-  {
+  else if (numpadValue.equals(DELETE_CODE) && calculatorEntry.length() > 0)
     calculatorEntry = calculatorEntry.substring(0, calculatorEntry.length()-1);
-  }
-  else if (numpadValue == CLEAR_CODE)
-  {
+  else if (numpadValue.equals(CLEAR_CODE))
     calculatorEntry = "";
-  }
+
+  calculatedResult = "";
 
   drawEntryBox();
+}
+
+public static boolean isNumeric(String str)
+{
+  try
+  {
+    Double.parseDouble(str);
+    return true;
+  }
+  catch(NumberFormatException e)
+  {
+    return false;
+  }
 }
 
 public void drawOperationsBox(int buttonSize)
 {
   final int buttonRows = 4;
   final int buttonColumns = 2;
-  final String[] buttonTitles = new String[]{DIVISION_CODE, EXPONENT_CODE, MUTLIPLICATION_CODE, OPEN_PAREN_CODE, SUBTRACTION_CODE, CLOSE_PAREN_CODE, ADDITION_CODE, EQUALS_CODE};
+  final String[] buttonTitles = operationButtonCodes;
 
   operationButtons = new ArrayList<Button>();
 
@@ -347,19 +514,101 @@ public void drawOperationsBox(int buttonSize)
 
 public void handleOperationPress(String operationValue)
 {
-  calculatorEntry += operationValue;
+  calculatedResult = "";
 
-  drawEntryBox();
+  String previousCharacter = null;
+  if (calculatorEntry.length() > 0)
+    previousCharacter = String.valueOf(calculatorEntry.charAt(calculatorEntry.length()-1));
+
+  if (operationValue.equals(EQUALS_CODE))
+    executeBaseCalculation();
+  else if (operationValue.equals(SUBTRACTION_CODE) && (calculatorEntry.length() == 0 || (!previousCharacter.equals("-")) && Arrays.asList(operationButtonCodes).contains(previousCharacter) && !previousCharacter.equals(OPEN_PAREN_CODE) && !previousCharacter.equals(CLOSE_PAREN_CODE)))
+  {
+    calculatorEntry += "-";
+    drawEntryBox();
+  }
+  else if (((operationValue.equals(OPEN_PAREN_CODE) && calculatorEntry.length() > 0 && !previousCharacter.equals("-")) || operationValue.equals(CLOSE_PAREN_CODE)) || (calculatorEntry.length() > 0 && ((previousCharacter.equals(CLOSE_PAREN_CODE) || (!Arrays.asList(operationButtonCodes).contains(previousCharacter) && !previousCharacter.equals("-"))))))
+  {
+    if (operationValue.equals(OPEN_PAREN_CODE) && calculatorEntry.length() > 0 && (previousCharacter.matches("[-\\d\\.EIN]+") || previousCharacter.equals(CLOSE_PAREN_CODE)))
+      calculatorEntry += MUTLIPLICATION_CODE;
+    else if (operationValue.equals(CLOSE_PAREN_CODE) && calculatorEntry.length() > 0 && (previousCharacter.equals(OPEN_PAREN_CODE) || previousCharacter.equals("-")))
+      calculatorEntry += "0";
+    calculatorEntry += operationValue;
+    drawEntryBox();
+  }
 }
 
 public void executeBaseCalculation()
 {
-  String calculatedResult = executeCalculation(calculatorEntry);
-  println(calculatedResult);
+  if (calculatorEntry.equals("")) return;
+
+  String formattedCalculatorEntry = checkParentheses(calculatorEntry);
+  calculatedResult = formatNumberAsString(executeCalculation(formattedCalculatorEntry));
+
+  if (calculatedResult.equals("")) return;
+
+  Double doubleResult = Double.parseDouble(calculatedResult);
+  if (Math.round(doubleResult) == doubleResult)
+    calculatedResult = String.valueOf((int)(double)(doubleResult));
+
+  if (shouldPrintDevLogs)
+    println("-", calculatedResult);
+
+  drawEntryBox();
+}
+
+public String checkParentheses(String calculation)
+{
+  int openParenCount = 0;
+  int closeParenCount = 0;
+
+  for (int i=0; i < calculation.length(); i++)
+  {
+    String calculationCharacter = String.valueOf(calculation.charAt(i));
+    if (calculationCharacter.equals(OPEN_PAREN_CODE)) openParenCount++;
+    if (calculationCharacter.equals(CLOSE_PAREN_CODE)) closeParenCount++;
+
+    if (closeParenCount > openParenCount)
+    {
+      calculation = OPEN_PAREN_CODE + calculation;
+      openParenCount++;
+      i++;
+    }
+  }
+
+  while (openParenCount > closeParenCount)
+  {
+    calculation += CLOSE_PAREN_CODE;
+    closeParenCount++;
+  }
+  while (openParenCount < closeParenCount)
+  {
+    calculation = OPEN_PAREN_CODE + calculation;
+    openParenCount++;
+  }
+
+  calculation = calculation.replace("()", "(0)");
+
+  return calculation;
 }
 
 public String executeCalculation(String calculation)
 {
+  String lastCharacter = null;
+  if (calculation.length() > 0)
+    lastCharacter = String.valueOf(calculation.charAt(calculation.length()-1));
+
+  if (calculation.length() > 0 && ((Arrays.asList(operationButtonCodes).contains(lastCharacter) || lastCharacter.equals("-")) && !lastCharacter.equals(OPEN_PAREN_CODE) && !lastCharacter.equals(CLOSE_PAREN_CODE)))
+  {
+    String secondToLastCharacter = null;
+    if (calculation.length() >= 2)
+      secondToLastCharacter = String.valueOf(calculation.charAt(calculation.length()-2));
+    if (lastCharacter.equals("-") && calculatorEntry.length() >= 2 && Arrays.asList(operationButtonCodes).contains(secondToLastCharacter) && !lastCharacter.equals(OPEN_PAREN_CODE) && !lastCharacter.equals(CLOSE_PAREN_CODE))
+      calculation = calculation.substring(0, calculation.length()-2);
+    else
+      calculation = calculation.substring(0, calculation.length()-1);
+  }
+
   calculation = evaluateParentheses(calculation);
   calculation = performOperations(calculation, new String[]{EXPONENT_CODE});
   calculation = performOperations(calculation, new String[]{MUTLIPLICATION_CODE, DIVISION_CODE});
@@ -408,7 +657,6 @@ public String performOperations(String calculation, String[] operationsToPerform
   ArrayList<String> numericalValues = getNumericalValues(calculation);
   ArrayList<String> operations = getOperations(calculation);
 
-  //println("1--" + calculation, operations);
   if (operations.size() == 0) return calculation;
 
   while (!Arrays.asList(operationsToPerform).contains(operations.get(0)))
@@ -417,6 +665,13 @@ public String performOperations(String calculation, String[] operationsToPerform
     numericalValues.remove(0);
     if (operations.size() == 0) return calculation;
   }
+
+  calculation = formatNumberAsString(calculation);
+  for (int i=0; i < numericalValues.size(); i++)
+    if (numericalValues.get(i).contains("I"))
+      numericalValues.set(i, numericalValues.get(i).replace("I", "Infinity"));
+    else if (numericalValues.get(i).contains("N"))
+      numericalValues.set(i, numericalValues.get(i).replace("N", "NaN"));
 
   double calculatedValue = 0;
   switch (operations.get(0))
@@ -443,7 +698,10 @@ public String performOperations(String calculation, String[] operationsToPerform
   }
 
   String newCalculation = calculation.replaceFirst(escapeRegex(numericalValues.get(0) + operations.get(0) + numericalValues.get(1)), String.valueOf(calculatedValue));
-  println(calculation, newCalculation);
+  newCalculation = formatStringAsNumber(newCalculation);
+
+  if (shouldPrintDevLogs)
+    println("--", calculation, newCalculation);
   return performOperations(newCalculation, operationsToPerform);
 }
 
@@ -451,7 +709,7 @@ public ArrayList<String> getNumericalValues(String calculation)
 {
   ArrayList<String> numericalValues = new ArrayList<String>();
 
-  Pattern pattern = Pattern.compile("([-\\d\\.E]+)");
+  Pattern pattern = Pattern.compile("([-\\d\\.EIN]+)");
   Matcher matcher = pattern.matcher(calculation);
   while (matcher.find())
   {
@@ -465,7 +723,7 @@ public ArrayList<String> getOperations(String calculation)
 {
   ArrayList<String> operations = new ArrayList<String>();
 
-  Pattern pattern = Pattern.compile("([^-\\d\\.E]+)");
+  Pattern pattern = Pattern.compile("([^-\\d\\.EIN]+)");
   Matcher matcher = pattern.matcher(calculation);
   while (matcher.find())
   {
@@ -473,6 +731,16 @@ public ArrayList<String> getOperations(String calculation)
   }
 
   return operations;
+}
+
+public String formatStringAsNumber(String number)
+{
+  return number.replace("Infinity", "I").replace("NaN", "N");
+}
+
+public String formatNumberAsString(String number)
+{
+  return number.replace("I", "Infinity").replace("N", "NaN");
 }
 
 public class Button
@@ -531,4 +799,63 @@ public class Button
   {
     return value;
   }
+}
+
+public int[] simulationData;
+
+public void simulateRandomKeyPresses(int repetitions, int simulationsRun)
+{
+  handleKeyPressed(16);
+  handleKeyPressed(8);
+  handleKeyReleased(8);
+  handleKeyReleased(16);
+
+  int[] randomKeys = new int[]{48+0, 48+1, 48+2, 48+3, 48+4, 48+5, 48+6, 48+7, 48+8, 48+9, 46, 54, 56, 57, 48, 45, 61, 47};
+  for (int i=0; i < repetitions; i++)
+  {
+    int randomKeyIndex = (int) Math.floor(Math.random() * randomKeys.length);
+    int randomKeyCode = randomKeys[randomKeyIndex];
+    boolean shouldPressShift = false;
+
+    if (randomKeyIndex >= 11 && randomKeyIndex != 15 && randomKeyIndex <= 16)
+      shouldPressShift = true;
+
+    if (shouldPressShift)
+      handleKeyPressed(16);
+    handleKeyPressed(randomKeyCode);
+    handleKeyReleased(randomKeyCode);
+    if (shouldPressShift)
+      handleKeyReleased(16);
+  }
+
+  simulationsRun++;
+  println(simulationsRun, calculatorEntry);
+
+  handleKeyPressed(61);
+  handleKeyReleased(61);
+
+  //if (calculatedResult.equals("NaN") || calculatedResult.contains("Infinity") || calculatedResult.contains("2147483647") || calculatedResult.contains("2147483648") || calculatedResult.equals("0") || calculatedResult.equals("1") || calculatedResult.contains("E"))
+  if (calculatedResult.equals("NaN"))
+    simulationData[0] = simulationData[0]+1;
+  else if (calculatedResult.contains("Infinity"))
+    simulationData[1] = simulationData[1]+1;
+  else if (calculatedResult.contains("2147483647"))
+    simulationData[2] = simulationData[2]+1;
+  else if (calculatedResult.contains("2147483648"))
+    simulationData[3] = simulationData[3]+1;
+  else if (calculatedResult.equals("0"))
+    simulationData[4] = simulationData[4]+1;
+  else if (calculatedResult.equals("1"))
+    simulationData[5] = simulationData[5]+1;
+  else if (calculatedResult.equals("-1"))
+    simulationData[6] = simulationData[6]+1;
+  else if (calculatedResult.contains("E"))
+    simulationData[7] = simulationData[7]+1;
+  else
+    simulationData[8] = simulationData[8]+1;
+
+  if (simulationsRun < 2000)
+    simulateRandomKeyPresses(repetitions, simulationsRun);
+  else
+    println(simulationData);
 }
