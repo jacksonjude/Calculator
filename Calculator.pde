@@ -234,7 +234,7 @@ public void handleKeyPressed(int keyCodePressed)
 
       case 192:
       shouldPrintDevLogs = false;
-      simulationData = new int[9];
+      //simulationData = new int[9];
       simulateRandomKeyPresses(80, 0);
       shouldPrintDevLogs = true;
       break;
@@ -527,7 +527,7 @@ public void handleOperationPress(String operationValue)
     calculatorEntry += "-";
     drawEntryBox();
   }
-  else if (((operationValue.equals(OPEN_PAREN_CODE) && calculatorEntry.length() > 0 && !previousCharacter.equals("-")) || operationValue.equals(CLOSE_PAREN_CODE)) || (calculatorEntry.length() > 0 && ((previousCharacter.equals(CLOSE_PAREN_CODE) || (!Arrays.asList(operationButtonCodes).contains(previousCharacter) && !previousCharacter.equals("-"))))))
+  else if (((operationValue.equals(OPEN_PAREN_CODE) && (calculatorEntry.length() == 0 || !previousCharacter.equals("-"))) || operationValue.equals(CLOSE_PAREN_CODE)) || (calculatorEntry.length() > 0 && ((previousCharacter.equals(CLOSE_PAREN_CODE) || (!Arrays.asList(operationButtonCodes).contains(previousCharacter) && !previousCharacter.equals("-"))))))
   {
     if (operationValue.equals(OPEN_PAREN_CODE) && calculatorEntry.length() > 0 && (previousCharacter.matches("[-\\d\\.EIN]+") || previousCharacter.equals(CLOSE_PAREN_CODE)))
       calculatorEntry += MUTLIPLICATION_CODE;
@@ -548,7 +548,7 @@ public void executeBaseCalculation()
   if (calculatedResult.equals("")) return;
 
   Double doubleResult = Double.parseDouble(calculatedResult);
-  if (Math.round(doubleResult) == doubleResult)
+  if (!calculatedResult.contains("E") && Math.round(doubleResult) == doubleResult)
     calculatedResult = String.valueOf((int)(double)(doubleResult));
 
   if (shouldPrintDevLogs)
@@ -801,7 +801,7 @@ public class Button
   }
 }
 
-public int[] simulationData;
+public int[] simulationData = new int[7];
 
 public void simulateRandomKeyPresses(int repetitions, int simulationsRun)
 {
@@ -839,20 +839,16 @@ public void simulateRandomKeyPresses(int repetitions, int simulationsRun)
     simulationData[0] = simulationData[0]+1;
   else if (calculatedResult.contains("Infinity"))
     simulationData[1] = simulationData[1]+1;
-  else if (calculatedResult.contains("2147483647"))
-    simulationData[2] = simulationData[2]+1;
-  else if (calculatedResult.contains("2147483648"))
-    simulationData[3] = simulationData[3]+1;
   else if (calculatedResult.equals("0"))
-    simulationData[4] = simulationData[4]+1;
+    simulationData[2] = simulationData[2]+1;
   else if (calculatedResult.equals("1"))
-    simulationData[5] = simulationData[5]+1;
+    simulationData[3] = simulationData[3]+1;
   else if (calculatedResult.equals("-1"))
-    simulationData[6] = simulationData[6]+1;
+    simulationData[4] = simulationData[4]+1;
   else if (calculatedResult.contains("E"))
-    simulationData[7] = simulationData[7]+1;
+    simulationData[5] = simulationData[5]+1;
   else
-    simulationData[8] = simulationData[8]+1;
+    simulationData[6] = simulationData[6]+1;
 
   if (simulationsRun < 2000)
     simulateRandomKeyPresses(repetitions, simulationsRun);
