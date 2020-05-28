@@ -28,7 +28,7 @@ public static final String OPEN_PAREN_CODE = "(";
 public static final String CLOSE_PAREN_CODE = ")";
 public static final String EQUALS_CODE = "=";
 
-public static final int DECIMAL_PLACES = 150;
+public static final int DECIMAL_PLACES = 1000;
 public static final int REPETITIONS_REQUIRED = 3;
 public static final int DISPLAY_DECIMAL_PLACES = 12;
 
@@ -780,13 +780,18 @@ public String getFractionalResult(String calculation)
   if (truncatedDecimal == "") return "";
 
   int patternLength = decimalPattern.length();
+  int decimalCalculationLength = (calculation.split("\\" + DECIMAL_CODE).length > 1 ? calculation.split("\\" + DECIMAL_CODE)[1].length() : 0);
   BigDecimal decimalCalculation = new BigDecimal(calculation);
-  BigDecimal numeratorDecimal = decimalCalculation.multiply(new BigDecimal(Math.pow(10, patternLength))).subtract(decimalCalculation).setScale(DISPLAY_DECIMAL_PLACES, RoundingMode.HALF_UP);
+  BigDecimal numeratorDecimal = decimalCalculation.multiply((new BigDecimal(10)).pow(patternLength)).subtract(decimalCalculation).setScale(decimalCalculationLength-patternLength-1, RoundingMode.HALF_UP);
   String numeratorString = String.valueOf(Double.parseDouble(DECIMAL_CODE + String.valueOf(numeratorDecimal).split("\\" + DECIMAL_CODE)[1]));
 
+  // println("1--", decimalPattern, truncatedDecimal, patternLength, numeratorDecimal, numeratorString);
+  // println("2--", decimalCalculation.multiply((new BigDecimal(10)).pow(patternLength)));
+  // println("3--", decimalCalculation);
+
   int lengthOfNumeratorDecimal = (numeratorString.split("\\" + DECIMAL_CODE).length > 1 ? numeratorString.split("\\" + DECIMAL_CODE)[1].length() : 0);
-  BigDecimal numerator = numeratorDecimal.multiply(new BigDecimal(Math.pow(10, lengthOfNumeratorDecimal)));
-  BigDecimal denominator = new BigDecimal(Math.pow(10, patternLength)).subtract(new BigDecimal(1)).multiply(new BigDecimal(Math.pow(10, lengthOfNumeratorDecimal)));
+  BigDecimal numerator = numeratorDecimal.multiply(new BigDecimal(10).pow(lengthOfNumeratorDecimal));
+  BigDecimal denominator = ((new BigDecimal(10)).pow(patternLength)).subtract(new BigDecimal(1)).multiply(new BigDecimal(10).pow(lengthOfNumeratorDecimal));
   BigDecimal gcdFraction = gcd(numerator, denominator);
 
   return numerator.divide(gcdFraction).toString() + "/" + denominator.divide(gcdFraction).toString();
