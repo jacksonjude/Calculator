@@ -1,9 +1,8 @@
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.Arrays;
-
-import java.util.Timer;
-import java.util.TimerTask;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 public static final int boxMargin = 15;
 public static final int boxHeight = 150;
@@ -29,13 +28,18 @@ public static final String OPEN_PAREN_CODE = "(";
 public static final String CLOSE_PAREN_CODE = ")";
 public static final String EQUALS_CODE = "=";
 
+public static final int DECIMAL_PLACES = 150;
+public static final int REPETITIONS_REQUIRED = 3;
+public static final int DISPLAY_DECIMAL_PLACES = 12;
+
 public ArrayList<Button> numpadButtons;
 public ArrayList<Button> operationButtons;
 
-public String[] operationButtonCodes = new String[]{DIVISION_CODE, EXPONENT_CODE, MUTLIPLICATION_CODE, OPEN_PAREN_CODE, SUBTRACTION_CODE, CLOSE_PAREN_CODE, ADDITION_CODE, EQUALS_CODE};
+public final String[] operationButtonCodes = new String[]{DIVISION_CODE, EXPONENT_CODE, MUTLIPLICATION_CODE, OPEN_PAREN_CODE, SUBTRACTION_CODE, CLOSE_PAREN_CODE, ADDITION_CODE, EQUALS_CODE};
 
 public String calculatorEntry = "";
 public String calculatedResult = "";
+public BigDecimal decimalResult;
 
 public ArrayList<Integer> keyCodesPressed = new ArrayList<Integer>();
 
@@ -499,17 +503,11 @@ public void drawOperationsBox(int buttonSize)
   rect(width-(boxMargin+buttonMargin*(buttonColumns+1)+buttonSize*buttonColumns), boxMargin*2+boxHeight, numpadWidth, numpadHeight);
 
   for (int i=0; i < buttonRows; i++)
-  {
     for (int j=0; j < buttonColumns; j++)
-    {
       operationButtons.add(new Button(buttonTitles[i*buttonColumns+j], buttonSize, width-(boxMargin+((buttonColumns-1-j)+1)*buttonMargin+(buttonColumns-1-j)*buttonSize+buttonSize/2), boxMargin*2+boxHeight+(i+1)*buttonMargin+i*buttonSize+buttonSize/2));
-    }
-  }
 
   for (Button operationButton : operationButtons)
-  {
     operationButton.show();
-  }
 }
 
 public void handleOperationPress(String operationValue)
@@ -529,7 +527,7 @@ public void handleOperationPress(String operationValue)
   }
   else if (((operationValue.equals(OPEN_PAREN_CODE) && (calculatorEntry.length() == 0 || !previousCharacter.equals("-"))) || operationValue.equals(CLOSE_PAREN_CODE)) || (calculatorEntry.length() > 0 && ((previousCharacter.equals(CLOSE_PAREN_CODE) || (!Arrays.asList(operationButtonCodes).contains(previousCharacter) && !previousCharacter.equals("-"))))))
   {
-    if (operationValue.equals(OPEN_PAREN_CODE) && calculatorEntry.length() > 0 && (previousCharacter.matches("[-\\d\\.EIN]+") || previousCharacter.equals(CLOSE_PAREN_CODE)))
+    if (operationValue.equals(OPEN_PAREN_CODE) && calculatorEntry.length() > 0 && (previousCharacter.matches("[-\\d\\" + DECIMAL_CODE + "EIN]+") || previousCharacter.equals(CLOSE_PAREN_CODE)))
       calculatorEntry += MUTLIPLICATION_CODE;
     else if (operationValue.equals(CLOSE_PAREN_CODE) && calculatorEntry.length() > 0 && (previousCharacter.equals(OPEN_PAREN_CODE) || previousCharacter.equals("-")))
       calculatorEntry += "0";
@@ -542,14 +540,31 @@ public void executeBaseCalculation()
 {
   if (calculatorEntry.equals("")) return;
 
-  String formattedCalculatorEntry = checkParentheses(calculatorEntry);
-  calculatedResult = formatNumberAsString(executeCalculation(formattedCalculatorEntry));
+  if (calculatedResult.equals("") || !calculatedResult.contains(DECIMAL_CODE))
+  {
+    String formattedCalculatorEntry = checkParentheses(calculatorEntry);
+    calculatedResult = formatNumberAsString(executeCalculation(formattedCalculatorEntry));
 
-  if (calculatedResult.equals("")) return;
+    if (calculatedResult.equals("")) return;
 
-  Double doubleResult = Double.parseDouble(calculatedResult);
-  if (!calculatedResult.contains("E") && Math.round(doubleResult) == doubleResult)
-    calculatedResult = String.valueOf((int)(double)(doubleResult));
+    if (calculatedResult.startsWith("0E") || calculatedResult.startsWith("-0E")) //Fix 0E-150 problem
+      calculatedResult = "0";
+
+    if (!(calculatedResult.contains("Infinity") || calculatedResult.contains("NaN")))
+      decimalResult = new BigDecimal(calculatedResult);
+
+    if (calculatedResult.contains(DECIMAL_CODE) && !calculatedResult.contains("E") && calculatedResult.split("\\" + DECIMAL_CODE)[1].length() > DISPLAY_DECIMAL_PLACES)
+      calculatedResult = calculatedResult.split("\\" + DECIMAL_CODE)[0] + DECIMAL_CODE + calculatedResult.split("\\" + DECIMAL_CODE)[1].substring(0, DISPLAY_DECIMAL_PLACES);
+
+    if (calculatedResult.endsWith(DECIMAL_CODE + "0"))
+      calculatedResult = calculatedResult.replace(DECIMAL_CODE + "0", "");
+  }
+  else if (calculatedResult.contains(DECIMAL_CODE) || decimalResult != null)
+  {
+    String fractionResult = getFractionalResult(decimalResult.toString());
+    if (!fractionResult.equals(""))
+      calculatedResult = fractionResult;
+  }
 
   if (shouldPrintDevLogs)
     println("-", calculatedResult);
@@ -640,16 +655,14 @@ public String evaluateParentheses(String calculation)
   }
 
   for (String parenthetical : parentheticals)
-  {
     calculation = calculation.replaceFirst("\\(" + escapeRegex(parenthetical) + "\\)", executeCalculation(parenthetical));
-  }
 
   return calculation;
 }
 
 public String escapeRegex(String literal)
 {
-  return literal.replace(".", "\\.").replace("+", "\\+").replace("*", "\\*").replace("^", "\\^").replace("(", "\\(").replace(")", "\\)");
+  return literal.replace(".", "\\" + DECIMAL_CODE).replace("+", "\\+").replace("*", "\\*").replace("^", "\\^").replace("(", "\\(").replace(")", "\\)");
 }
 
 public String performOperations(String calculation, String[] operationsToPerform)
@@ -673,31 +686,46 @@ public String performOperations(String calculation, String[] operationsToPerform
     else if (numericalValues.get(i).contains("N"))
       numericalValues.set(i, numericalValues.get(i).replace("N", "NaN"));
 
-  double calculatedValue = 0;
+  String calculatedValue = "0";
+  //println("NUM--", numericalValues.get(0), numericalValues.get(1), calculation);
   switch (operations.get(0))
   {
     case EXPONENT_CODE:
-    calculatedValue = Math.pow(Double.parseDouble(numericalValues.get(0)), Double.parseDouble(numericalValues.get(1)));
+    calculatedValue = String.valueOf(Math.pow(Double.parseDouble(numericalValues.get(0)), Double.parseDouble(numericalValues.get(1))));
     break;
 
     case MUTLIPLICATION_CODE:
-    calculatedValue = Double.parseDouble(numericalValues.get(0))*Double.parseDouble(numericalValues.get(1));
+    if (numericalValues.get(0).contains("Infinity") || numericalValues.get(1).contains("Infinity") || numericalValues.get(0).contains("NaN") || numericalValues.get(1).contains("NaN"))
+      calculatedValue = String.valueOf(Double.parseDouble(numericalValues.get(0))*Double.parseDouble(numericalValues.get(1)));
+    else
+      calculatedValue = (new BigDecimal(numericalValues.get(0))).multiply(new BigDecimal(numericalValues.get(1))).toString();
     break;
 
     case DIVISION_CODE:
-    calculatedValue = Double.parseDouble(numericalValues.get(0))/Double.parseDouble(numericalValues.get(1));
+    if (numericalValues.get(0).contains("Infinity") || numericalValues.get(1).contains("Infinity") || numericalValues.get(0).contains("NaN") || numericalValues.get(1).contains("NaN"))
+      calculatedValue = String.valueOf(Double.parseDouble(numericalValues.get(0))/Double.parseDouble(numericalValues.get(1)));
+    else
+      calculatedValue = (!(Double.parseDouble(numericalValues.get(1)) == 0.0) ? (new BigDecimal(numericalValues.get(0))).divide(new BigDecimal(numericalValues.get(1)), DECIMAL_PLACES, RoundingMode.FLOOR).toString() : (Double.parseDouble(numericalValues.get(0)) == 0.0 ? "NaN" : "Infinity"));
     break;
 
     case ADDITION_CODE:
-    calculatedValue = Double.parseDouble(numericalValues.get(0))+Double.parseDouble(numericalValues.get(1));
+    if (numericalValues.get(0).contains("Infinity") || numericalValues.get(1).contains("Infinity") || numericalValues.get(0).contains("NaN") || numericalValues.get(1).contains("NaN"))
+      calculatedValue = String.valueOf(Double.parseDouble(numericalValues.get(0))+Double.parseDouble(numericalValues.get(1)));
+    else
+      calculatedValue = (new BigDecimal(numericalValues.get(0))).add(new BigDecimal(numericalValues.get(1))).toString();
     break;
 
     case SUBTRACTION_CODE:
-    calculatedValue = Double.parseDouble(numericalValues.get(0))-Double.parseDouble(numericalValues.get(1));
+    if (numericalValues.get(0).contains("Infinity") || numericalValues.get(1).contains("Infinity") || numericalValues.get(0).contains("NaN") || numericalValues.get(1).contains("NaN"))
+      calculatedValue = String.valueOf(Double.parseDouble(numericalValues.get(0))-Double.parseDouble(numericalValues.get(1)));
+    else
+      calculatedValue = (new BigDecimal(numericalValues.get(0))).subtract(new BigDecimal(numericalValues.get(1))).toString();
     break;
   }
 
-  String newCalculation = calculation.replaceFirst(escapeRegex(numericalValues.get(0) + operations.get(0) + numericalValues.get(1)), String.valueOf(calculatedValue));
+  calculatedValue = calculatedValue.replace("+", "");
+
+  String newCalculation = calculation.replaceFirst(escapeRegex(numericalValues.get(0) + operations.get(0) + numericalValues.get(1)), calculatedValue.toString());
   newCalculation = formatStringAsNumber(newCalculation);
 
   if (shouldPrintDevLogs)
@@ -709,7 +737,7 @@ public ArrayList<String> getNumericalValues(String calculation)
 {
   ArrayList<String> numericalValues = new ArrayList<String>();
 
-  Pattern pattern = Pattern.compile("([-\\d\\.EIN]+)");
+  Pattern pattern = Pattern.compile("([-\\d\\" + DECIMAL_CODE + "EIN]+)");
   Matcher matcher = pattern.matcher(calculation);
   while (matcher.find())
   {
@@ -723,7 +751,7 @@ public ArrayList<String> getOperations(String calculation)
 {
   ArrayList<String> operations = new ArrayList<String>();
 
-  Pattern pattern = Pattern.compile("([^-\\d\\.EIN]+)");
+  Pattern pattern = Pattern.compile("([^-\\d\\" + DECIMAL_CODE + "EIN]+)");
   Matcher matcher = pattern.matcher(calculation);
   while (matcher.find())
   {
@@ -741,6 +769,58 @@ public String formatStringAsNumber(String number)
 public String formatNumberAsString(String number)
 {
   return number.replace("I", "Infinity").replace("N", "NaN");
+}
+
+public String getFractionalResult(String calculation)
+{
+  //642857142857
+  String decimalPattern = findRepeatingDecimalPattern(calculation, REPETITIONS_REQUIRED);
+  if (decimalPattern == "") return "";
+  String truncatedDecimal = getDecimalWithoutPattern(calculation, decimalPattern);
+  if (truncatedDecimal == "") return "";
+
+  int patternLength = decimalPattern.length();
+  BigDecimal decimalCalculation = new BigDecimal(calculation);
+  BigDecimal numeratorDecimal = decimalCalculation.multiply(new BigDecimal(Math.pow(10, patternLength))).subtract(decimalCalculation).setScale(DISPLAY_DECIMAL_PLACES, RoundingMode.HALF_UP);
+  String numeratorString = String.valueOf(Double.parseDouble(DECIMAL_CODE + String.valueOf(numeratorDecimal).split("\\" + DECIMAL_CODE)[1]));
+
+  int lengthOfNumeratorDecimal = (numeratorString.split("\\" + DECIMAL_CODE).length > 1 ? numeratorString.split("\\" + DECIMAL_CODE)[1].length() : 0);
+  BigDecimal numerator = numeratorDecimal.multiply(new BigDecimal(Math.pow(10, lengthOfNumeratorDecimal)));
+  BigDecimal denominator = new BigDecimal(Math.pow(10, patternLength)).subtract(new BigDecimal(1)).multiply(new BigDecimal(Math.pow(10, lengthOfNumeratorDecimal)));
+  BigDecimal gcdFraction = gcd(numerator, denominator);
+
+  return numerator.divide(gcdFraction).toString() + "/" + denominator.divide(gcdFraction).toString();
+}
+
+public BigDecimal gcd(BigDecimal a, BigDecimal b)
+{
+   if (b.compareTo(new BigDecimal(0.0)) == 0) return a;
+   return gcd(b, a.remainder(b));
+}
+
+public String findRepeatingDecimalPattern(String calculation, int numberOfRepetitionsRequired)
+{
+  String patternString = "\\" + DECIMAL_CODE + "\\d*?(\\d+?)";
+  for (int i=0; i < numberOfRepetitionsRequired; i++)
+    patternString += "\\1";
+  patternString += ".*";
+
+  return getRegexGroup(calculation, patternString);
+}
+
+public String getDecimalWithoutPattern(String calculation, String decimalPattern)
+{
+  String patternString = "(.*\\" + DECIMAL_CODE + "\\d*?)" + decimalPattern + ".*";
+  return getRegexGroup(calculation, patternString);
+}
+
+public String getRegexGroup(String testString, String patternString)
+{
+  Pattern pattern = Pattern.compile(patternString);
+  Matcher matcher = pattern.matcher(testString);
+  if (matcher.find())
+    return matcher.group(1);
+  return "";
 }
 
 public class Button
