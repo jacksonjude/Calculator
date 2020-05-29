@@ -30,6 +30,7 @@ public static final String EQUALS_CODE = "=";
 
 public static final int DECIMAL_PLACES = 1000;
 public static final int REPETITIONS_REQUIRED = 3;
+public static final int DECIMAL_PLACES_REQUIRED = 12;
 public static final int DISPLAY_DECIMAL_PLACES = 12;
 
 public ArrayList<Button> numpadButtons;
@@ -556,8 +557,18 @@ public void executeBaseCalculation()
     if (calculatedResult.contains(DECIMAL_CODE) && !calculatedResult.contains("E") && calculatedResult.split("\\" + DECIMAL_CODE)[1].length() > DISPLAY_DECIMAL_PLACES)
       calculatedResult = calculatedResult.split("\\" + DECIMAL_CODE)[0] + DECIMAL_CODE + calculatedResult.split("\\" + DECIMAL_CODE)[1].substring(0, DISPLAY_DECIMAL_PLACES);
 
-    if (calculatedResult.endsWith(DECIMAL_CODE + "0"))
-      calculatedResult = calculatedResult.replace(DECIMAL_CODE + "0", "");
+    if (!(calculatedResult.contains("Infinity") || calculatedResult.contains("NaN")))
+    {
+      String strippedZeroResult = (new BigDecimal(calculatedResult)).stripTrailingZeros().toString();
+      if (strippedZeroResult.contains("E"))
+      {
+        int absoluteExponentValue = Math.abs(Integer.parseInt(strippedZeroResult.split("E")[1]));
+        if (absoluteExponentValue < DISPLAY_DECIMAL_PLACES*2)
+          calculatedResult = (new BigDecimal(calculatedResult)).stripTrailingZeros().toPlainString();
+      }
+      else
+        calculatedResult = strippedZeroResult;
+    }
   }
   else if (calculatedResult.contains(DECIMAL_CODE) || decimalResult != null)
   {
@@ -774,8 +785,43 @@ public String formatNumberAsString(String number)
 public String getFractionalResult(String calculation)
 {
   //642857142857
+  String fractionString;
+
   String decimalPattern = findRepeatingDecimalPattern(calculation, REPETITIONS_REQUIRED);
-  if (decimalPattern == "") return "";
+  if (decimalPattern == "" || !(calculation.contains(DECIMAL_CODE) && calculation.split("\\" + DECIMAL_CODE)[1].length() > DECIMAL_PLACES_REQUIRED))
+    fractionString = getNonRepeatingFraction(calculation);
+  else
+    fractionString = getRepeatingFraction(calculation, decimalPattern);
+
+  if (!fractionString.contains("/")) return "";
+
+  BigDecimal numerator = new BigDecimal(fractionString.split("\\/")[0]);
+  BigDecimal denominator = new BigDecimal(fractionString.split("\\/")[1]);
+
+  BigDecimal gcdFraction = gcd(numerator, denominator);
+
+  //println(fractionString, numerator, denominator, gcdFraction);
+
+  return numerator.divide(gcdFraction).setScale(0, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() + "/" + denominator.divide(gcdFraction).setScale(0, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString();
+}
+
+public BigDecimal gcd(BigDecimal a, BigDecimal b)
+{
+   if (b.compareTo(new BigDecimal(0.0)) == 0) return a;
+   return gcd(b, a.remainder(b));
+}
+
+public String getNonRepeatingFraction(String calculation)
+{
+  int decimalLength = ((new BigDecimal(calculation)).toPlainString().split("\\" + DECIMAL_CODE)[1].length());
+  BigDecimal denominatorDecimal = (new BigDecimal(10)).pow(decimalLength);
+  BigDecimal numeratorDecimal = (new BigDecimal(calculation)).multiply(denominatorDecimal);
+
+  return numeratorDecimal.stripTrailingZeros().toPlainString() + "/" + denominatorDecimal.stripTrailingZeros().toPlainString();
+}
+
+public String getRepeatingFraction(String calculation, String decimalPattern)
+{
   String truncatedDecimal = getDecimalWithoutPattern(calculation, decimalPattern);
   if (truncatedDecimal == "") return "";
 
@@ -792,15 +838,8 @@ public String getFractionalResult(String calculation)
   int lengthOfNumeratorDecimal = (numeratorString.split("\\" + DECIMAL_CODE).length > 1 ? numeratorString.split("\\" + DECIMAL_CODE)[1].length() : 0);
   BigDecimal numerator = numeratorDecimal.multiply(new BigDecimal(10).pow(lengthOfNumeratorDecimal));
   BigDecimal denominator = ((new BigDecimal(10)).pow(patternLength)).subtract(new BigDecimal(1)).multiply(new BigDecimal(10).pow(lengthOfNumeratorDecimal));
-  BigDecimal gcdFraction = gcd(numerator, denominator);
 
-  return numerator.divide(gcdFraction).toString() + "/" + denominator.divide(gcdFraction).toString();
-}
-
-public BigDecimal gcd(BigDecimal a, BigDecimal b)
-{
-   if (b.compareTo(new BigDecimal(0.0)) == 0) return a;
-   return gcd(b, a.remainder(b));
+  return numerator.toString() + "/" + denominator.toString();
 }
 
 public String findRepeatingDecimalPattern(String calculation, int numberOfRepetitionsRequired)
